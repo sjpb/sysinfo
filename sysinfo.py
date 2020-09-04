@@ -4,14 +4,19 @@
         cpuinfo
         lshw (with sudo)
         free
+    TODO: remove need for root for memory info
     TODO: sort output/python api.
-
-    Could also scrape /sys/devices/virtual/dmi/id/
-        product_name
-        sys_vendor
 """
 
 import subprocess, pprint, collections, os
+
+# chassis:
+DMI_ROOT = '/sys/devices/virtual/dmi/id/'
+chassis_info = {
+    'product_name': open(os.path.join(DMI_ROOT, 'product_name')).read().strip(),
+    'sys_vendor': open(os.path.join(DMI_ROOT, 'sys_vendor')).read().strip(),
+}
+print(chassis_info)
 
 # cpu info:
 cpuinfo = {} # key->str, value->str
