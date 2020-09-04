@@ -1,7 +1,7 @@
 """ WiP: Get information about host hardware.
 
     Requires following commands to be available:
-        cpuinfo
+        lscpu
         lshw (with sudo)
         free
     TODO: remove need for root for memory info
@@ -27,35 +27,35 @@ for line in lscpu.stdout.splitlines():
         cpuinfo[k.strip()] = v.strip()
 pprint.pprint(cpuinfo)
 
-# network (adaptor) info
-# (hpc-tests) [steveb@openhpc-login-0 sysinfo]$ cat /sys/class/net/p4p2/device/vendor /sys/class/net/p4p2/device/device
-# 0x15b3
-# 0x1013
-# lspci -nn | grep 15b3:1013
-
-# find network devices:
+# network (adaptor) info:
 NETROOT = '/sys/class/net'
 devnames = [dev for dev in os.listdir(NETROOT) if os.path.exists(os.path.join(NETROOT, dev, 'device'))]
-devinfo = {}
+netinfo = {}
 for dev in devnames:
     speed = open(os.path.join(NETROOT, dev, 'speed')).read().strip()
     if not speed or int(speed) < 1:
         continue
+    netinfo[dev] = {'speed': '%s Mbits/s' % speed } # Mbits/sec as per https://www.kernel.org/doc/Documentation/ABI/testing/sysfs-class-net
     vendor_id = open(os.path.join(NETROOT, dev, 'device/vendor')).read().strip()
     device_id = open(os.path.join(NETROOT, dev, 'device/device')).read().strip()
+    pci_id = os.path.basename(os.path.realpath(os.path.join(NETROOT, dev, 'device')))  # e.g. '0000:82:00.1'
     lspci = subprocess.run(['lspci', '-d', '%s:%s' % (vendor_id, device_id), '-nn'], capture_output=True, text=True)
-    #for descr in lspci.stdout.splitlines()
-    print(dev, speed) # Mbits/sec as per https://www.kernel.org/doc/Documentation/ABI/testing/sysfs-class-net
-    print(lspci.stdout)
-    # TODO: need to disambiguate devices!
-
-# memory size:
+    for descr in lspci.stdout.splitlines():
+        if descr.split()[0] in pci_id: # descr[0] e.g. '82:00.1'
+            netinfo[dev]['descr'] = descr
+            break
+pprint.pprint(netinfo)
+    
+# memory info:
 free = subprocess.run(['free', '-h'], capture_output=True, text=True)
 lines = [line.split() for line in free.stdout.splitlines()]
 if lines[0][0] != 'total' or lines[1][0] != 'Mem:':
     raise ValueError('unexpected result from free:\n%s' % free.stdout)
-memsize = lines[1][1]
-print(memsize)
+meminfo = {'total': lines[1][1]}
+pprint.pprint(meminfo)
+
+
+exit() # TODO: fixme
 
 # memory info:
 lshwmem = subprocess.run(['sudo', 'lshw', '-class', 'memory', '-short'], capture_output=True, text=True)
