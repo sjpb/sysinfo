@@ -52,7 +52,7 @@ for line in lines:
         mem_type = [d for d in descr if 'DDR' in d][0]
         hz = descr.index('MHz')
         mem_speed = '%s %s' % (descr[hz - 1], descr[hz])
-        ddr_info.append((mem_size, mem_type, mem_speed)
+        ddr_info.append((mem_size, mem_type, mem_speed))
 unique_ddr = collections.Counter(ddr_info)
 meminfo = ['%i x %s' % (v, k) for k, v in unique_ddr.items()]
 print(meminfo)
