@@ -5,9 +5,13 @@
         lshw (with sudo)
         free
     TODO: sort output/python api.
+
+    Could also scrape /sys/devices/virtual/dmi/id/
+        product_name
+        sys_vendor
 """
 
-import subprocess, pprint, collections, json
+import subprocess, pprint, collections, os
 
 # cpu info:
 cpuinfo = {} # key->str, value->str
@@ -19,15 +23,26 @@ for line in lscpu.stdout.splitlines():
 pprint.pprint(cpuinfo)
 
 # network (adaptor) info
-netadaptinfo = []
-lshwnet = subprocess.run(['sudo', 'lshw', '-class', 'network'], capture_output=True, text=True)
-for line in lshwnet.stdout.splitlines():
-    if not line.isspace():
-        k, v = [w.strip() for w  in line.split(':', 1)]
-        if k.startswith('*-network'):
-            netadaptinfo.append({})
-        netadaptinfo[-1][k] = v
-pprint.pprint(netadaptinfo)
+# (hpc-tests) [steveb@openhpc-login-0 sysinfo]$ cat /sys/class/net/p4p2/device/vendor /sys/class/net/p4p2/device/device
+# 0x15b3
+# 0x1013
+# lspci -nn | grep 15b3:1013
+
+# find network devices:
+NETROOT = '/sys/class/net'
+devnames = [dev for dev in os.listdir(NETROOT) if os.path.exists(os.path.join(NETROOT, dev, 'device'))]
+devinfo = {}
+for dev in devnames:
+    speed = open(os.path.join(NETROOT, dev, 'speed')).read().strip()
+    if not speed or int(speed) < 1:
+        continue
+    vendor_id = open(os.path.join(NETROOT, dev, 'device/vendor')).read().strip()
+    device_id = open(os.path.join(NETROOT, dev, 'device/device')).read().strip()
+    lspci = subprocess.run(['lspci', '-d', '%s:%s' % (vendor_id, device_id), '-nn'], capture_output=True, text=True)
+    #for descr in lspci.stdout.splitlines()
+    print(dev, speed) # Mbits/sec as per https://www.kernel.org/doc/Documentation/ABI/testing/sysfs-class-net
+    print(lspci.stdout)
+    # TODO: need to disambiguate devices!
 
 # memory size:
 free = subprocess.run(['free', '-h'], capture_output=True, text=True)
