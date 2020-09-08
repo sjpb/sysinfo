@@ -8,7 +8,7 @@
     TODO: sort output/python api.
 """
 
-import subprocess, pprint, collections, os
+import subprocess, pprint, collections, os, glob
 
 # chassis:
 DMI_ROOT = '/sys/devices/virtual/dmi/id/'
@@ -47,32 +47,15 @@ for dev in devnames:
 pprint.pprint(netinfo)
     
 # memory info:
-free = subprocess.run(['free', '-h'], capture_output=True, text=True)
+# size:
+free = subprocess.run(['free', '-h', '--si'], capture_output=True, text=True)
 lines = [line.split() for line in free.stdout.splitlines()]
 if lines[0][0] != 'total' or lines[1][0] != 'Mem:':
     raise ValueError('unexpected result from free:\n%s' % free.stdout)
 meminfo = {'total': lines[1][1]}
-pprint.pprint(meminfo)
-
-
-exit() # TODO: fixme
-
-# memory info:
-lshwmem = subprocess.run(['sudo', 'lshw', '-class', 'memory', '-short'], capture_output=True, text=True)
-lines = lshwmem.stdout.splitlines()
-header = lines[0]
-descr_col = lines[0].find('Description')
-if descr_col < 0:
-    raise ValueError('Did not find "Description" in header %r' % header)
-ddr_info = []
-for line in lines:
-    if "DDR" in line:
-        descr = line[descr_col:].split()
-        mem_size = descr[0]
-        mem_type = [d for d in descr if 'DDR' in d][0]
-        hz = descr.index('MHz')
-        mem_speed = '%s %s' % (descr[hz - 1], descr[hz])
-        ddr_info.append((mem_size, mem_type, mem_speed))
-unique_ddr = collections.Counter(ddr_info)
-meminfo = ['%i x %s' % (v, k) for k, v in unique_ddr.items()]
+mem_types = []
+for dimm in glob.glob('/sys/devices/system/edac/mc/mc*/dimm*'):
+    mem_type = open(os.path.join(dimm, 'dimm_mem_type')).read().strip()
+    mem_types.append(mem_type)
+meminfo['type'] = list(set(mem_types))
 print(meminfo)
