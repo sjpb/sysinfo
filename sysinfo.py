@@ -2,9 +2,11 @@
 
     Requires following commands to be available:
         lscpu
-        lshw (with sudo)
+        lspci
         free
-    TODO: remove need for root for memory info
+    
+    Root should not be required.
+    
     TODO: sort output/python api.
 """
 
