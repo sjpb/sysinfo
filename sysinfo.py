@@ -10,11 +10,21 @@
     TODO: sort output/python api.
 """
 
-import subprocess, pprint, collections, os, glob
+import subprocess, pprint, collections, os, glob, socket
 
 def get_info():
-    info = {}
 
+    info = {'hostname': socket.gethostname()}
+
+    # os:
+    uname = subprocess.run(['uname', '-r'], capture_output=True, text=True)
+    with open('/etc/os-release') as f:
+        release = dict(line.split('=') for line in f.read().splitlines() if line)
+    info['os'] = {
+        'release': release,
+        'kernel': uname.stdout.strip()
+    }
+    
     # chassis:
     DMI_ROOT = '/sys/devices/virtual/dmi/id/'
     chassis_info = {
@@ -69,4 +79,5 @@ def get_info():
 
 if __name__ == '__main__':
     info = get_info()
-    pprint.pprint(info)
+    with open('%s.info' % info['hostname'], 'w') as f:
+        pprint.pprint(info, stream=f)
