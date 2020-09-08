@@ -7,10 +7,10 @@
     
     Root should not be required.
 
-    TODO: sort output/python api.
+    Creates a file `$HOSTNAME.sysinfo.json`.
 """
 
-import subprocess, pprint, collections, os, glob, socket
+import subprocess, pprint, collections, os, glob, socket, json
 
 def get_info():
 
@@ -72,12 +72,13 @@ def get_info():
     for dimm in glob.glob('/sys/devices/system/edac/mc/mc*/dimm*'):
         mem_type = open(os.path.join(dimm, 'dimm_mem_type')).read().strip()
         mem_types.append(mem_type)
-    meminfo['type'] = list(set(mem_types))
+    meminfo['types'] = list(set(mem_types))
     info['memory'] = meminfo
 
     return info
 
 if __name__ == '__main__':
     info = get_info()
-    with open('%s.info' % info['hostname'], 'w') as f:
-        pprint.pprint(info, stream=f)
+    with open('%s.sysinfo.json' % info['hostname'], 'w') as f:
+        json.dump(info, f)
+        
